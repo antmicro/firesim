@@ -1,0 +1,39 @@
+#! /bin/bash
+#
+# cleanup	Terminates F1 instances on stop
+#
+# chkconfig: 2345 99 01
+# description: Makes cleanup when instance is being stopped - terminates all instances spawned by FireSim
+. /etc/init.d/functions
+
+rc=0
+
+# See how we were called.
+case "$1" in
+start)
+    echo "Cleanup will be done before stopping instance"
+    ;;
+stop)
+    echo "Stop all farm instances"
+    runuser -l centos -s /bin/bash -c 'export PATH=/opt/conda/condabin/:$PATH
+      eval '"$(conda shell.bash hook)"'
+      cd /home/centos/firesim
+      source sourceme-manager.sh
+      python3 /home/centos/.cron/cron_job.py cleanup
+    ' 2>&1 | tee -a /home/centos/.cron/cleanup.log
+    rc=$?
+    ;;
+status)
+    echo "Cleanup is active"
+    ;;
+restart|force-reload)
+    $0 stop
+    rc=$?
+    $0 start
+    ;;
+*)
+    echo $"Usage: $0 {start|stop|status|restart|force-reload}"
+    exit 2
+esac
+
+exit $rc
